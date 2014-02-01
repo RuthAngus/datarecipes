@@ -1,21 +1,29 @@
+# Implementing excersize 6 of Hogg et al.: fitting a line to data drawn from a line and
+# a gaussian
+
 import numpy as np
 import emcee
 import scipy.optimize as op
 import matplotlib.pyplot as pl
 import triangle
+import scipy as sp
 
+# line model
 def line(theta, x):
     return theta[0]*x + theta[1]
 
+# likelihood fn
 def lnlike(theta, x, y, yerr):
     m, b, Y, V, P = theta
     model1 = line([m,b], x)
     model2 = Y
     inv_sigma21 = 1./(yerr**2)
     inv_sigma22 = 1./(V + yerr**2)
-    return -0.5*(np.sum((y-model1)**2*inv_sigma21 - np.log((1.-P)*inv_sigma21)))\
-            -0.5*(np.sum((y-model2)**2*inv_sigma22 - np.log(P*inv_sigma22)))
+    lnlike1 =  - 0.5 * ((y-model1)**2*inv_sigma21 - np.log(inv_sigma21))
+    lnlike2 =  - 0.5 * ((y-model2)**2*inv_sigma22 - np.log(inv_sigma22))
+    return np.sum(np.logaddexp(np.log(1-P) + lnlike1, np.log(P) + lnlike2))
 
+# Flat priors
 def lnprior(theta):
     m, b, Y, V, P = theta
     if 0 < m < 5 and -100 < b < 400 and 0 < Y < 700 and 0 < V < 10000 and 0 < P < 1:
@@ -28,12 +36,13 @@ def lnprob(theta, x, y, yerr):
         return -np.inf
     return lp + lnlike(theta, x, y, yerr)
 
+# Load data
 data = np.genfromtxt('/Users/angusr/Python/datarecipes/data.txt').T
-x = data[0]#[5:]
-y = data[1]#[5:]
-yerr = data[2]#[5:]
-xerr = data[3]#[5:]
-pxy = data[4]#[5:]
+x = data[0]
+y = data[1]
+yerr = data[2]
+xerr = data[3]
+pxy = data[4]
 
 # m, b, Yb, Vb, Pb
 theta_init = [2., 34., 400., 200., .5]
